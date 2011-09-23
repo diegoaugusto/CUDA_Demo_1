@@ -19,14 +19,22 @@
 @interface AppController : NSObject {
 	IBOutlet NSTextField *textFieldElevation;
 	IBOutlet NSTextField *textFieldAzimuth;
+	IBOutlet NSSlider *azimSlider;
 	WavFile *wavFile;
+	int azim;
+	int elev;
 }
+
+@property WavFile *wavFile;
+@property int azim;
+@property int elev;
 
 - (void) playAudio2:(Uint8 *) audioStream audioLength:(int) audioLengthValue;
 - (IBAction)calculateWhrtf:(id)sender;
 - (IBAction)playPressed:(id)sender;
 - (IBAction)pausePressed:(id)sender;
 - (IBAction)loadSoundOpenPanel:(id)sender;
+- (IBAction) sliderValueChanged:(id)sender; 
 
 void cudaCompute(void);
 

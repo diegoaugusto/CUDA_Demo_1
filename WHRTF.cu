@@ -65,13 +65,15 @@ void checkCUDAError(const char *msg);
 extern "C" void initCUDA(void);
 extern "C" short* findDelay(float** hrtf, int length);
 extern "C" float* shiftInParallel(float* vec, int vecLength, short delay, int maxLength);
+extern "C" float* shiftToRight(float* vec, int vecLength, short delay);
 extern "C" void coef_spars(char* filtro[], int filtroLength, float* ho1d, int ho1dLength, float** G_aux, int* G_size);
 extern "C" float* resp_imp(char* filtros[], int numFiltros, float** G, int* G_size, int* resultLength);
 extern "C" void coef_spars2(char* filtro[], int numFiltros, float* ho1d, int ho1dLength, float** G_aux, int* G_size);
 extern "C" void coef_spars_host(char* filtro[], int numFiltros, float* ho1d, int ho1dLength, float** G_aux, int* G_size);
 
 
-extern "C" float* convFFT(float* signal, int signalLength, float* filter, int filterLength);
+extern "C" float* convFFT(float* signal, unsigned int signalLength, float* filter, unsigned int filterLength);
+extern "C" float* cconvFFT(float* signal, unsigned int signalLength, float* filter, unsigned int filterLength);
 
 
 
@@ -99,7 +101,7 @@ int PadData(const Complex*, Complex**, int, const Complex*, Complex**, int);
 ////////////////////////////////////////////////////////////////////////////////
 //! Run a simple test for CUDA
 ////////////////////////////////////////////////////////////////////////////////
-float* convFFT(float* signal, int signalLength, float* filter, int filterLength) {
+float* convFFT(float* signal, unsigned int signalLength, float* filter, unsigned int filterLength) {
     // Allocate host memory for the signal
     Complex* h_signal = (Complex*) malloc(sizeof(Complex) * signalLength);
 	
@@ -164,7 +166,7 @@ float* convFFT(float* signal, int signalLength, float* filter, int filterLength)
                               cudaMemcpyDeviceToHost);
 
     // Allocate host memory for the convolution result
-    Complex* h_convolved_signal_ref = (Complex*)malloc(sizeof(Complex) * signalLength);
+    //Complex* h_convolved_signal_ref = (Complex*)malloc(sizeof(Complex) * signalLength);
 
     // Convolve on the host
 	
@@ -242,6 +244,108 @@ void Convolve(const Complex* signal, int signal_size,
         }
     }
 }
+
+
+float* cconvFFT(float* signal, unsigned int signalLength, float* filter, unsigned int filterLength) {
+    // Allocate host memory for the signal
+    Complex* h_signal = (Complex*) malloc(sizeof(Complex) * signalLength);
+	
+    // Initalize the memory for the signal
+    for (unsigned int i = 0; i < signalLength; ++i) {
+        h_signal[i].x = signal[i];
+        h_signal[i].y = 0.0;
+    }
+
+    // Allocate host memory for the filter (DIEGO: same signal lenght)
+    Complex* h_filter_kernel = (Complex*) malloc(sizeof(Complex) * signalLength);
+	
+    // Initalize the memory for the filter
+    for (unsigned int i = 0; i < signalLength; ++i) {
+		if (i < filterLength) {
+			h_filter_kernel[i].x = filter[i];
+			h_filter_kernel[i].y = 0.0;
+		} else {
+			h_filter_kernel[i].x = 0.0;
+			h_filter_kernel[i].y = 0.0;
+		}
+        
+    }
+
+    // Pad signal and filter kernel
+    //Complex* h_padded_signal;
+    //Complex* h_padded_filter_kernel;
+    //int new_size = PadData(h_signal, &h_padded_signal, signalLength,
+    //                       h_filter_kernel, &h_padded_filter_kernel, filterLength);
+	
+	int new_size = signalLength;
+    int mem_size = sizeof(Complex) * new_size;
+
+    // Allocate device memory for signal
+    Complex* d_signal;
+    cudaMalloc((void**)&d_signal, mem_size);
+    // Copy host memory to device
+    cudaMemcpy(d_signal, h_signal, mem_size, cudaMemcpyHostToDevice);
+
+    // Allocate device memory for filter kernel
+    Complex* d_filter_kernel;
+    cudaMalloc((void**)&d_filter_kernel, mem_size);
+
+    // Copy host memory to device
+    cudaMemcpy(d_filter_kernel, h_filter_kernel, mem_size, cudaMemcpyHostToDevice);
+
+    // CUFFT plan
+    cufftHandle plan;
+    cufftPlan1d(&plan, new_size, CUFFT_C2C, 1);
+
+    // Transform signal and kernel
+    cufftExecC2C(plan, (cufftComplex *)d_signal, (cufftComplex *)d_signal, CUFFT_FORWARD);
+    cufftExecC2C(plan, (cufftComplex *)d_filter_kernel, (cufftComplex *)d_filter_kernel, CUFFT_FORWARD);
+
+    // Multiply the coefficients together and normalize the result
+    ComplexPointwiseMulAndScale<<<32, 256>>>(d_signal, d_filter_kernel, new_size, 1.0f / new_size);
+
+    // Check if kernel execution generated and error
+    //cutilCheckMsg("Kernel execution failed [ ComplexPointwiseMulAndScale ]");
+
+    // Transform signal back
+    cufftExecC2C(plan, (cufftComplex *)d_signal, (cufftComplex *)d_signal, CUFFT_INVERSE);
+
+    // Copy device memory to host
+    Complex* h_convolved_signal = (Complex*) malloc(mem_size);
+    cudaMemcpy(h_convolved_signal, d_signal, mem_size, cudaMemcpyDeviceToHost);
+
+    // Allocate host memory for the convolution result
+    //Complex* h_convolved_signal_ref = (Complex*)malloc(sizeof(Complex) * signalLength);
+
+    // Convolve on the host
+	
+	float* convolvedSignal = (float*) calloc(new_size, sizeof(float));
+	for (int i = 0; i < new_size; i++) {
+		convolvedSignal[i] = h_convolved_signal[i].x;
+	}
+
+    // check result
+
+
+    //Destroy CUFFT context
+    cufftDestroy(plan);
+
+    // cleanup memory
+    free(h_signal);
+    free(h_filter_kernel);
+    //free(h_padded_signal);
+    //free(h_padded_filter_kernel);
+    //free(h_convolved_signal_ref);
+	//free(h_convolved_signal);
+    cudaFree(d_signal);
+    cudaFree(d_filter_kernel);
+	
+	return convolvedSignal;
+
+}
+
+
+
 
 ////////////////////////////////////////////////////////////////////////////////
 // Complex operations
@@ -647,6 +751,23 @@ float* shiftInParallel(float* vec, int vecLength, short delay, int maxLength) {
 	return h_result;
 }
 
+
+float* shiftToRight(float* vec, int vecLength, short delay) {
+	// Variables
+	float* h_result = NULL;
+	
+	h_result = (float*) calloc(vecLength, sizeof(float));
+	
+	for (int i = 0; i < vecLength; i++) {
+		if ((i - delay) < 0) {
+			h_result[i] = 0.0;
+		} else {
+			h_result[i] = vec[i-delay];
+		}
+	}
+	
+	return h_result;
+}
 
 
 // Sparse coefficients

@@ -19,7 +19,7 @@
 // ########################################
 // prototypes
 Uint8* convertToUint8Array(float** data, Uint32 wavLen);
-float** convertToFloatArray(Uint8 *wavBuf, Uint32 wavLen);
+float** convertToFloatArray(Uint8 *wavBuf, Uint32 wavLen, int *floatArrayLength);
 float** getStream(char* filename, SDL_AudioSpec *wavSpec);
 void fill_audio(void *udata, Uint8 *stream, int len);		// callback function
 void playAudio();
@@ -36,16 +36,24 @@ Uint8 *wav_buf;
 Uint8* convertToUint8Array(float** data, Uint32 wavLen) {
 	short numOfChannels = 2;
 	int numOfSamplesInChannel = (wavLen/numOfChannels);
+	int numOfFloatSamplesInChannel = numOfSamplesInChannel/2;
 	
 	short *aux = (short *) malloc(numOfSamplesInChannel * sizeof(short));
 	
-	// Considering only audio files with 2 channels
 	int j = 0;
-	for (int i = 0; i < numOfSamplesInChannel; i=i+2) {		
-		aux[i] = (short) (data[0][j] * 32768);
-		aux[i+1] = (short) (data[1][j] * 32768);
-		j++;
+	for (int i = 0; i < numOfFloatSamplesInChannel; i++) {
+		aux[j++] = (short) (data[0][i] * 32768);
+		aux[j++] = (short) (data[1][i] * 32768);
 	}
+	
+	// Considering only audio files with 2 channels
+	/*for (int i = 0; i < numOfSamplesInChannel; i=i+2) {	
+		aux[i] = (short) (data[0][j] * 32768);
+		printf("aux[%d] = %d, data[0][%d] = %1.15f\n", i, aux[i], j, data[0][j]);
+		aux[i+1] = (short) (data[1][j] * 32768);
+		printf("aux[%d] = %d, data[1][%d] = %1.15f\n", i+1, aux[i+1], j, data[1][j]);
+		j++;
+	}*/
 	
 	j = 0;
 	Uint8 *wavBuf = (Uint8 *) calloc(wavLen, sizeof(Uint8)); 
@@ -63,13 +71,14 @@ Uint8* convertToUint8Array(float** data, Uint32 wavLen) {
 }
 
 
-float** convertToFloatArray(Uint8 *wavBuf, Uint32 wavLen) {
+float** convertToFloatArray(Uint8 *wavBuf, Uint32 wavLen, int *floatArrayLength) {
 	short numOfChannels = 2;
-	int numOfSamplesInChannel = (wavLen/numOfChannels);
+	int numOfFloatSamplesInChannel = (wavLen/numOfChannels)/2;
+	*floatArrayLength = numOfFloatSamplesInChannel;
 	
 	float **data = (float **) malloc(numOfChannels * sizeof(float*));
 	for (int i = 0; i < numOfChannels; i++) {
-		data[i] = (float *) malloc(numOfSamplesInChannel * sizeof(float));
+		data[i] = (float *) malloc(numOfFloatSamplesInChannel * sizeof(float));
 	}
 	
 	short *aux = (short *) malloc((wavLen/2) * sizeof(short));
@@ -84,7 +93,7 @@ float** convertToFloatArray(Uint8 *wavBuf, Uint32 wavLen) {
 	
 	// Considering only audio files with 2 channels
 	int j = 0;
-	for (int i = 0; i < numOfSamplesInChannel; i=i+2) {
+	for (int i = 0; i < numOfFloatSamplesInChannel*2; i=i+2) {
 		data[0][j] = ((float)aux[i])/32768.0f;
 		data[1][j] = ((float)aux[i+1])/32768.0f;		
 		j++;
@@ -107,8 +116,8 @@ Uint8* getStreamUint8(char* filename, SDL_AudioSpec *wavSpec) {
 	 printf("wav_spec.format = %d\n", wav_spec.format);
 	 printf("wav_spec.channels = %d\n", wav_spec.channels);
 	 printf("wav_spec.silence = %d\n", wav_spec.silence);
-	 printf("wav_spec.samples = %d\n", wav_spec.samples);*/
-	 printf("wav_spec.size = %d\n", wav_spec.size);
+	 printf("wav_spec.samples = %d\n", wav_spec.samples);
+	 printf("wav_spec.size = %d\n", wav_spec.size);*/
 	
 	wav_spec.size = wav_len;
 	*wavSpec = wav_spec;
@@ -172,6 +181,7 @@ static Uint8 *audio_pos;
  *	stream:	A pointer to the audio buffer to be filled
  *	len:	The length (in bytes) of the audio buffer
  */
+static int cont = 0;
 void fill_audio(void *udata, Uint8 *stream, int len) {
 	/* Only play if we have data left */
 	if ( audio_len == 0 ) {
@@ -181,14 +191,19 @@ void fill_audio(void *udata, Uint8 *stream, int len) {
 	/* Mix as much data as possible */
 	len = ( len > audio_len ? audio_len : len );
 	
-	SDL_MixAudio(stream, audio_pos, len, SDL_MIX_MAXVOLUME);
+	int floatArrayLength;
+	float** data = convertToFloatArray(audio_pos, len, &floatArrayLength);
+	Uint8 *audioStream = convertToUint8Array(data, len);
+	
+	//SDL_MixAudio(stream, audio_pos, len, SDL_MIX_MAXVOLUME);
+	SDL_MixAudio(stream, audioStream, len, SDL_MIX_MAXVOLUME);
 	
 	audio_pos += len;
 	audio_len -= len;
 }
 
 void playAudio(Uint8 *audioStream, int audioLength) {
-	if( SDL_Init(SDL_INIT_TIMER | SDL_INIT_AUDIO ) <0 ) {
+	if( SDL_Init(SDL_INIT_TIMER | SDL_INIT_AUDIO ) < 0 ) {
         return 1;
     }
 	

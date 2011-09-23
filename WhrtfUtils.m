@@ -156,8 +156,6 @@ void getWhrtfFromPosition(int elev, int azim, char ear, float** whrtfL, int *whr
 	
 	getWhrtfFromPosition(elev, azim, ear, &whrtfL, &whrtfLengthL, &whrtfR, &whrtfLengthR);
 	
-	printf("whrtfLengthL = %d, whrtfLengthR = %d\n", whrtfLengthL, whrtfLengthR);
-	
 	WhrtfForPositionBean *whrtfForPosition = [[WhrtfForPositionBean alloc] init];
 	whrtfForPosition.elevation = elev;
 	whrtfForPosition.azimuth = azim;

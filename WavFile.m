@@ -44,7 +44,9 @@
     {
 		SDL_AudioSpec wav_spec;
 		Uint8* resultStreamUint8 = getStreamUint8([filePath UTF8String], &wav_spec);
-		float** resultStream = convertToFloatArray(resultStreamUint8, wav_spec.size);
+
+		int floatArrayLength;
+		float** resultStream = convertToFloatArray(resultStreamUint8, wav_spec.size, &floatArrayLength);
 		
         [self setPath:filePath];
 		[self setName:[filePath lastPathComponent]];
