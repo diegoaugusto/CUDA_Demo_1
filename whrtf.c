@@ -54,6 +54,8 @@ void printDelayedHrtf(float* h, int vecLength) {
 float** getCoefSpars(int elev, int azim, char ear, int* G_size) {	
 	float** hrtf = readHrtf(elev, azim, 'L', MIN_SAMPLE_NUMBER, MAX_SAMPLE_NUMBER);	
 	short* delay = findDelay(hrtf, MAX_SAMPLE_NUMBER - MIN_SAMPLE_NUMBER);
+	free(hrtf[1]);
+	free(hrtf[0]);
 	free(hrtf);
 	
 	//printDelay(delay);
@@ -70,6 +72,9 @@ float** getCoefSpars(int elev, int azim, char ear, int* G_size) {
 		ho1d = shiftInParallel(ho[1], NUM_COEF_WITHOUT_BEGINNING, delay[1], length);
 	}
 	
+	free(delay);
+	free(ho[1]);
+	free(ho[0]);
 	free(ho);
 	
 	//printDelayedHrtf(ho1d, length);
@@ -109,6 +114,8 @@ float** getCoefSpars(int elev, int azim, char ear, int* G_size) {
 		}
 	}
 	
+	free(G_aux[1]);
+	free(G_aux[0]);
 	free(G_aux);
 	
 	return G;

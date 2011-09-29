@@ -550,10 +550,15 @@ short* findDelay(float** hrtf, int vecLength) {
 		}
 		short* indexes = findIndexesGreaterThan(ek[ear], vecLength, 0.002f);
 		d[ear] = indexes[0]-1;	
+		cleanHostMemory(indexes);
 	}
 	
+	cleanHostMemory(ek[1]);
+	cleanHostMemory(ek[0]);
 	cleanHostMemory(ek);
 	cleanHostMemory(et);
+	cleanHostMemory(squaredElements[1]);
+	cleanHostMemory(squaredElements[0]);
 	cleanHostMemory(squaredElements);
 	
 	return d;
@@ -1963,8 +1968,18 @@ void dec_poly_host(int hlength, float* sist, int sistLength, float** G, int* G_s
 		G[1][i] = Gp[1][i+atraso];
 	}
 	
+	free(Rp[1]);
+	free(Rp[0]);
 	free(Rp);
+	free(Gp[1]);
+	free(Gp[0]);
 	free(Gp);
+	free(ip_aux[0][0]);
+	free(ip_aux[0][1]);
+	free(ip_aux[1][0]);
+	free(ip_aux[1][1]);
+	free(ip_aux[1]);
+	free(ip_aux[0]);
 	free(ip_aux);
 }
 
@@ -1990,11 +2005,12 @@ void coef_spars_host(char* filtro[], int numFiltros, float* ho1d, int ho1dLength
 		mesmofiltro = (0 < numFiltros-1 && strcmp(filtro[0], filtro[1]) == 0);
 	}
 	
+	
 	// Banco de análise
 	double** H = (double**) malloc(2 * sizeof(double*));
 	H[0] = (double*) malloc(filtroLength * sizeof(double));
 	H[1] = (double*) malloc(filtroLength * sizeof(double));
-	
+
 	// Banco de síntese
 	double** F = (double**) malloc(2 * sizeof(double*));
 	F[0] = (double*) malloc(filtroLength * sizeof(double));
@@ -2088,9 +2104,15 @@ void coef_spars_host(char* filtro[], int numFiltros, float* ho1d, int ho1dLength
 		free(F[j]);
 	}
 	
+	for (int i = 0; i < (numFiltros+1); i++) {
+		free(coefSpars[i]);
+	}
+	
 	free(coefSpars);
 	free(sist);
 	free(G);
+	free(h[1]);
+	free(h[0]);
 	free(h);
 	free(H);
 	free(F);
@@ -2972,12 +2994,16 @@ float* resp_imp(char* filtros[], int numFiltros, float** G, int* G_size, int* re
 	cudaFree(d_filterBankLength);
 	cudaFree(d_rSize);
 	
-	free(h_resultado);
+	for (int i = 0; i < (numFiltros + 1); i++) {
+		free(filterBank[i]);
+	}
+	
 	free(filterBank);
 	free(filterBankLength);
 	free(h_G);
 	free(h_filterBank);
 	free(h_rSize);
+	free(h_resultado);
 	//END_RUNTIME; printf("\n[free]: "); PRINT_RUNTIME;
 	//END_RUNTIME; printf("\n[1]: "); PRINT_RUNTIME;
 	

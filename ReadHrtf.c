@@ -107,6 +107,7 @@ float** readHrtf(int elev, int azim, char ear, int minCoef, int maxCoef) {
 	
 	float norma = norm(aux, size);
 	free(aux);
+	free(AUXx);
 	free(AUXpath);
 	
 	for (int i = 0; i < hrtfFileSize; i++) {
@@ -124,6 +125,8 @@ float** readHrtf(int elev, int azim, char ear, int minCoef, int maxCoef) {
 		y[1][j] = x[1][i];
 	}
 
+	free(x[1]);
+	free(x[0]);
 	free(x);
 	
 	return y;

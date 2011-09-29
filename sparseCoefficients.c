@@ -252,6 +252,15 @@ float** getWhrtfWithKnownElev(int elev, int azim, char ear, int* Gp_size) {
 		
 		Gp = getGp(Ga, Ga_size, Gb, Gb_size, minBound, maxBound, azim, Gp_size);
 		
+		for (int i = 0; i < (NUM_FILTROS+1); i++) {
+			free(Ga[i]);
+			free(Gb[i]);
+		}
+			
+		free(Ga);
+		free(Ga_size);
+		free(Gb);
+		free(Gb_size);
 	} else if (minBound == maxBound) {
 		Gp = getCoefSpars(elev, minBound, ear, Gp_size);
 	}
@@ -283,6 +292,11 @@ float** getSparseCoefficients(int elev, int azim, int ear, int* Gp_size) {
 		float** Gb = getWhrtfWithKnownElev(maxElev, azim, ear, Gb_size);
 		
 		Gp = getGp(Ga, Ga_size, Gb, Gb_size, minElev, maxElev, elev, Gp_size);
+		
+		for (int i = 0; i < (NUM_FILTROS+1); i++) {
+			free(Ga[i]);
+			free(Gb[i]);
+		}
 		
 		free(Ga);
 		free(Ga_size);

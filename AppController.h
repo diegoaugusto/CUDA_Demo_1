@@ -35,6 +35,7 @@
 - (IBAction)pausePressed:(id)sender;
 - (IBAction)loadSoundOpenPanel:(id)sender;
 - (IBAction) sliderValueChanged:(id)sender; 
+- (IBAction) sliderElevValueChanged:(id)sender;
 
 void cudaCompute(void);
 

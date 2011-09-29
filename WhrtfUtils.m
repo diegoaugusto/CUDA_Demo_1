@@ -83,6 +83,10 @@ void *whrtfMain(void *arg) {
 	G = getSparseCoefficients(elev, azim, ear, G_size);
 	float* whrtf = getRespImp(NUM_FILTROS, G, G_size, &whrtfLength);
 	
+	for (int i = 0; i < (NUM_FILTROS+1); i++) {
+		free(G[i]);
+	}
+	
 	free(G);
 	free(G_size);
 	
@@ -121,7 +125,7 @@ void getWhrtfFromPosition(int elev, int azim, char ear, float** whrtfL, int *whr
 	*whrtfL = paramL->whrtf;
 	*whrtfLengthL = paramL->whrtfLength;
 	
-	if (azim != 0) {
+	if (azim != 0 && azim != 180) {
 		pthread_create(&threadR, NULL, whrtfMain, (void *) paramR);
 		pthread_join( threadR, NULL);
 		
@@ -134,6 +138,8 @@ void getWhrtfFromPosition(int elev, int azim, char ear, float** whrtfL, int *whr
 	
 	free(paramL);
 	free(paramR);
+	//free(threadL);
+	//free(threadR);
 	
 	return;
 }

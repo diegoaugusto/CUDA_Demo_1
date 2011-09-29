@@ -68,8 +68,10 @@ static float** originalStream;
  *	len:	The length (in bytes) of the audio buffer
  */
 static int r = 0;
-static WhrtfForPositionBean *whrtfs[360];
-static staticAzim = 0;
+//static WhrtfForPositionBean *whrtfs[121][360];
+static WhrtfForPositionBean *whrtfs[10][360];
+static int staticAzim = 0;
+static int staticElev = 0;
 void fill_audio2(void *udata, Uint8 *stream, int len) {
 	/* Only play if we have data left */
 	/*if ( audio_len == 0 ) {
@@ -186,9 +188,11 @@ void fill_audio2(void *udata, Uint8 *stream, int len) {
 	audio_len -= len;*/
 	
 	//#####################################
-	int index = staticAzim;
+	int indexAzim = staticAzim;
+	int indexElev = staticElev;
 	
-	WhrtfForPositionBean *whrtfForPositionLocal = whrtfs[index];
+	//WhrtfForPositionBean *whrtfForPositionLocal = whrtfs[indexElev+40][indexAzim];
+	WhrtfForPositionBean *whrtfForPositionLocal = whrtfs[indexElev][indexAzim];
 	if ( audio_len == 0 ) {
 		return;
 	}
@@ -242,7 +246,8 @@ void fill_audio2(void *udata, Uint8 *stream, int len) {
 	r++;
 	
 	int deltaL, deltaR;
-	calculaITD(index, 'L', &deltaL, &deltaR);
+	calculaITD(indexAzim, 'L', &deltaL, &deltaR);
+	//calculaITD(60, 'L', &deltaL, &deltaR);
 	
 	float** aux = (float**) calloc(2, sizeof(float*));
 	
@@ -317,12 +322,35 @@ void fill_audio2(void *udata, Uint8 *stream, int len) {
 	WavFile *wavfile = [self wavFile];
 	originalStream = [wavfile stream];
 	
-	int elev = 0;
+	
+	/*int azim = 60;
 	int j = 0;
-	for (int i = 0; i < 360; i += 1) {
-		WhrtfForPositionBean *whrtfForPositionLocalBean = [WhrtfUtils calcWhrtfForPosition:elev azimValue:i];
+	for (int i = -40; i < 80; i++) {
+		printf("i = %d\n", i);
+		WhrtfForPositionBean *whrtfForPositionLocalBean = [WhrtfUtils calcWhrtfForPosition:i azimValue:azim];
 		whrtfs[j++] = whrtfForPositionLocalBean;
+	}*/
+	
+	/*int elev = 0;
+	for (int k = 0; k < 1; k++) {
+		for (int i = 0; i < 360; i += 1) {
+			WhrtfForPositionBean *whrtfForPositionLocalBean = [WhrtfUtils calcWhrtfForPosition:k azimValue:i];
+			whrtfs[k+40][i] = whrtfForPositionLocalBean;
+		}
+	}*/
+	
+	int elev = 0;
+	for (int k = 0; k < 10; k++) {
+		printf("elev = %d\n", k);
+		for (int i = 0; i < 360; i += 1) {
+			WhrtfForPositionBean *whrtfForPositionLocalBean = [WhrtfUtils calcWhrtfForPosition:k azimValue:i];
+			whrtfs[k][i] = whrtfForPositionLocalBean;
+		}
 	}
+	
+	
+	//WhrtfForPositionBean *whrtfForPositionLocalBean = [WhrtfUtils calcWhrtfForPosition:elev azimValue:0];
+	//whrtfs[0] = whrtfForPositionLocalBean;
 	
     /* Let the callback function play the audio chunk */
     SDL_PauseAudio(0);
@@ -437,7 +465,29 @@ void fill_audio2(void *udata, Uint8 *stream, int len) {
 - (IBAction) sliderValueChanged:(id)sender {
 	int value = [sender intValue];
 	staticAzim = value;
+	[textFieldAzimuth setIntValue:value];
+	
+	//WhrtfForPositionBean *whrtfForPositionLocalBean = [WhrtfUtils calcWhrtfForPosition:elev azimValue:value];
+	//whrtfs[value] = whrtfForPositionLocalBean;
+	
 	//[self setAzim:value];
+}
+
+- (IBAction) sliderElevValueChanged:(id)sender {
+	int value = [sender intValue];
+	staticElev = value;
+	[textFieldElevation setIntValue:value];
+	
+	//WhrtfForPositionBean *whrtfForPositionLocalBean = [WhrtfUtils calcWhrtfForPosition:elev azimValue:value];
+	//whrtfs[value] = whrtfForPositionLocalBean;
+	
+	//[self setAzim:value];
+}
+
+
+- (void)rotateWithEvent:(NSEvent *)event {
+    //[resultsField setStringValue:[NSString stringWithFormat:@"Rotation in degree is %f", [event rotation]]];
+    //[self setFrameCenterRotation:([self frameCenterRotation] + [event rotation])];
 }
 
 @end
